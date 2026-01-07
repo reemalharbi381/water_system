@@ -51,3 +51,4 @@ def get_invoices(c_id: int):
     conn.close()
     return [{"date": r[0], "amount": r[1], "status": r[2]} for r in rows]
 #final update check
+#finalS 
