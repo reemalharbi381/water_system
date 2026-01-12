@@ -1,5 +1,5 @@
-import google.generativeai as genai
 import psycopg2
+import requests
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -20,42 +20,38 @@ API_KEYS = [
 
 DB_URL = "postgresql://postgres:jCeYkVrnaQHuumtGZqsqmdbJlPvuZseZ@postgres.railway.internal:5432/railway"
 
-def get_db_connection():
-    return psycopg2.connect(DB_URL)
-
 @app.get("/")
 async def home():
-    return {
-        "status": "success",
-        "bot_name": "Qatrah / قطرة"
-    }
+    return {"status": "success", "bot_name": "Qatrah / قطرة"}
 
 @app.get("/chatbot")
 async def chatbot(user_input: str):
     for key in API_KEYS:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key}"
+        payload = {
+            "contents": [{
+                "parts": [{"text": f"Your name is Qatrah (قطرة). Respond in user language. User asked: {user_input}"}]
+            }]
+        }
         try:
-            genai.configure(api_key=key)
-            model = genai.GenerativeModel('models/gemini-1.5-flash')
+            response = requests.post(url, json=payload, timeout=10)
+            data = response.json()
             
-            context = (
-                "Your name is 'Qatrah' (قطرة). Assistant for Water Management System. "
-                "Respond in the user's language (Arabic/English). Be concise."
-            )
-            
-            response = model.generate_content(f"{context}\nUser: {user_input}")
-            return {"reply": response.text}
-            
+            if response.status_code == 200:
+                return {"reply": data['candidates'][0]['content']['parts'][0]['text']}
+            elif response.status_code == 429:
+                continue
+            else:
+                return {"reply": "Error from Google", "details": data}
         except Exception as e:
-            if "429" in str(e) or "quota" in str(e).lower():
-                continue 
-            return {"reply": "Technical glitch.", "error": str(e)}
-    
-    return {"reply": "All lines busy, try later."}
+            continue
+            
+    return {"reply": "All systems busy, try again later."}
 
 @app.get("/customer/{c_id}/invoices")
 async def get_invoices(c_id: int):
     try:
-        conn = get_db_connection()
+        conn = psycopg2.connect(DB_URL)
         cur = conn.cursor()
         cur.execute("SELECT invoice_date, amount, status FROM invoices WHERE customer_id = %s", (c_id,))
         rows = cur.fetchall()
