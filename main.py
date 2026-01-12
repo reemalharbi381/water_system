@@ -27,26 +27,24 @@ async def home():
 @app.get("/chatbot")
 async def chatbot(user_input: str):
     for key in API_KEYS:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent?key={key}"
         payload = {
             "contents": [{
-                "parts": [{"text": f"Your name is Qatrah (قطرة). Respond in user language. User asked: {user_input}"}]
+                "parts": [{"text": f"Your name is Qatrah (قطرة). Assistant for Water Management. Respond in the user's language. User: {user_input}"}]
             }]
         }
         try:
-            response = requests.post(url, json=payload, timeout=10)
+            response = requests.post(url, json=payload, timeout=15)
             data = response.json()
-            
             if response.status_code == 200:
                 return {"reply": data['candidates'][0]['content']['parts'][0]['text']}
             elif response.status_code == 429:
                 continue
             else:
-                return {"reply": "Error from Google", "details": data}
-        except Exception as e:
+                continue
+        except:
             continue
-            
-    return {"reply": "All systems busy, try again later."}
+    return {"reply": "عذراً، النظام يواجه ضغطاً، جربي المحاولة مرة أخرى الآن."}
 
 @app.get("/customer/{c_id}/invoices")
 async def get_invoices(c_id: int):
@@ -60,3 +58,4 @@ async def get_invoices(c_id: int):
         return [{"date": str(r[0]), "amount": float(r[1]), "status": r[2]} for r in rows]
     except Exception as e:
         return {"error": str(e)}
+    #1
