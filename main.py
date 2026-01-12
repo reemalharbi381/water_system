@@ -12,6 +12,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# AI Configuration
 genai.configure(api_key="AIzaSyCgjnyS5rj4v1XpYRWRs6NIf9F0amq48Ug")
 model = genai.GenerativeModel('gemini-2.0-flash')
 
@@ -25,30 +26,41 @@ async def home():
     return {
         "status": "success",
         "bot_name": "Qatrah / قطرة",
-        "welcome_note": "Welcome! I am Qatrah, your water assistant. How can I help you today? / أهلاً بك! أنا قطرة، مساعدك الذكي للمياه. كيف يمكنني مساعدتك اليوم؟"
+        "welcome_note": "Welcome! I am Qatrah, your water assistant. How can I help you today?"
     }
 
 @app.get("/chatbot")
 async def chatbot(user_input: str):
-    context = (
-        "Your name is 'Qatrah' (قطرة). You are a professional assistant for a Water Management System. "
-        "Detect the user's language automatically. If the user speaks Arabic, respond in Arabic. "
-        "If the user speaks English, respond in English. Always introduce yourself as Qatrah if asked. "
-        "Keep your answers polite and helpful."
-    )
-    
-    full_prompt = f"{context}\nUser question: {user_input}"
-    
-    response = model.generate_content(full_prompt)
-    return {"reply": response.text}
+    try:
+        # Context to define the bot's identity and language rules
+        context = (
+            "Your name is 'Qatrah' (قطرة). You are a professional assistant for a Water Management System. "
+            "Detect the user's language automatically. If the user speaks Arabic, respond in Arabic. "
+            "If the user speaks English, respond in English. Always introduce yourself as Qatrah if asked."
+        )
+        
+        full_prompt = f"{context}\nUser question: {user_input}"
+        
+        # Try to generate content
+        response = model.generate_content(full_prompt)
+        return {"reply": response.text}
+
+    except Exception as e:
+        # This will help us catch the exact reason for the 500 error
+        return {
+            "reply": "Sorry, I'm having trouble connecting to my AI core. Please try again later.",
+            "error_details": str(e)
+        }
 
 @app.get("/customer/{c_id}/invoices")
 async def get_invoices(c_id: int):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT invoice_date, amount, status FROM invoices WHERE customer_id = %s", (c_id,))
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
-    return [{"date": str(r[0]), "amount": float(r[1]), "status": r[2]} for r in rows]
-#1ٍ
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT invoice_date, amount, status FROM invoices WHERE customer_id = %s", (c_id,))
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        return [{"date": str(r[0]), "amount": float(r[1]), "status": r[2]} for r in rows]
+    except Exception as e:
+        return {"error": "Database connection failed", "details": str(e)}
