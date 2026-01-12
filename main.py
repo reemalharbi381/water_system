@@ -5,7 +5,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-# Enable CORS for all origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -13,11 +12,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# AI Configuration (Using your API Key)
 genai.configure(api_key="AIzaSyCgjnyS5rj4v1XpYRWRs6NIf9F0amq48Ug")
 model = genai.GenerativeModel('gemini-2.0-flash')
 
-# Database connection details
 DB_URL = "postgresql://postgres:jCeYkVrnaQHuumtGZqsqmdbJlPvuZseZ@postgres.railway.internal:5432/railway"
 
 def get_db_connection():
@@ -25,18 +22,26 @@ def get_db_connection():
 
 @app.get("/")
 async def home():
-    return {"message": "Water System API is running successfully"}
+    return {
+        "status": "success",
+        "bot_name": "Qatrah / قطرة",
+        "welcome_note": "Welcome! I am Qatrah, your water assistant. How can I help you today? / أهلاً بك! أنا قطرة، مساعدك الذكي للمياه. كيف يمكنني مساعدتك اليوم؟"
+    }
 
-# NEW: AI Chatbot (Replaces the old SQL-based search)
 @app.get("/chatbot")
 async def chatbot(user_input: str):
-    context = "You are a professional assistant for a Water Management System. Provide helpful and polite answers about water conservation and general inquiries in English."
+    context = (
+        "Your name is 'Qatrah' (قطرة). You are a professional assistant for a Water Management System. "
+        "Detect the user's language automatically. If the user speaks Arabic, respond in Arabic. "
+        "If the user speaks English, respond in English. Always introduce yourself as Qatrah if asked. "
+        "Keep your answers polite and helpful."
+    )
+    
     full_prompt = f"{context}\nUser question: {user_input}"
     
     response = model.generate_content(full_prompt)
     return {"reply": response.text}
 
-# Keep the invoices function as it is needed for the dashboard
 @app.get("/customer/{c_id}/invoices")
 async def get_invoices(c_id: int):
     conn = get_db_connection()
