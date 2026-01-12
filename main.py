@@ -27,8 +27,7 @@ def get_db_connection():
 async def home():
     return {
         "status": "success",
-        "bot_name": "Qatrah / قطرة",
-        "welcome_note": "Welcome! I am Qatrah, your water assistant. You can chat with me in Arabic or English."
+        "bot_name": "Qatrah / قطرة"
     }
 
 @app.get("/chatbot")
@@ -36,25 +35,22 @@ async def chatbot(user_input: str):
     for key in API_KEYS:
         try:
             genai.configure(api_key=key)
-            model = genai.GenerativeModel('gemini-1.5-flash-latest')
+            model = genai.GenerativeModel('gemini-1.5-flash')
             
             context = (
-                "Your name is 'Qatrah' (قطرة). You are a professional assistant for a Water Management System. "
-                "Detect the user's language (Arabic or English) and respond in the same language. "
-                "Keep your answers helpful and concise."
+                "Your name is 'Qatrah' (قطرة). Assistant for Water Management System. "
+                "Respond in the user's language (Arabic/English). Be concise."
             )
             
-            full_prompt = f"{context}\nUser: {user_input}"
-            response = model.generate_content(full_prompt)
+            response = model.generate_content(f"{context}\nUser: {user_input}")
             return {"reply": response.text}
             
         except Exception as e:
             if "429" in str(e) or "quota" in str(e).lower():
                 continue 
-            else:
-                return {"reply": "عذراً، واجهت مشكلة تقنية بسيطة.", "error_details": str(e)}
+            return {"reply": "Technical glitch.", "error": str(e)}
     
-    return {"reply": "جميع خطوطي مشغولة حالياً بكثرة الزوار، فضلاً حاول مجدداً بعد دقائق قليلة!"}
+    return {"reply": "All lines busy, try later."}
 
 @app.get("/customer/{c_id}/invoices")
 async def get_invoices(c_id: int):
@@ -67,4 +63,4 @@ async def get_invoices(c_id: int):
         conn.close()
         return [{"date": str(r[0]), "amount": float(r[1]), "status": r[2]} for r in rows]
     except Exception as e:
-        return {"error": "Database error", "details": str(e)}
+        return {"error": str(e)}
