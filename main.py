@@ -35,7 +35,7 @@ async def chatbot(user_input: str):
     for key in API_KEYS:
         try:
             genai.configure(api_key=key)
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            model = genai.GenerativeModel('models/gemini-1.5-flash')
             
             context = (
                 "Your name is 'Qatrah' (قطرة). Assistant for Water Management System. "
