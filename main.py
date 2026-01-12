@@ -12,9 +12,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# AI Configuration
-genai.configure(api_key="AIzaSyCgjnyS5rj4v1XpYRWRs6NIf9F0amq48Ug")
-model = genai.GenerativeModel('gemini-2.0-flash')
+API_KEYS = [
+    "AIzaSyBqLY6mih3iIcx0BYCrqEwGDt4dwQgw_fk",
+    "AIzaSyC-_etncXNX2Oxviy5YjEHU8soDTJ6mXQU",
+    "AIzaSyCgjnyS5rj4v1XpYRWRs6NIf9F0amq48Ug"
+]
 
 DB_URL = "postgresql://postgres:jCeYkVrnaQHuumtGZqsqmdbJlPvuZseZ@postgres.railway.internal:5432/railway"
 
@@ -26,31 +28,33 @@ async def home():
     return {
         "status": "success",
         "bot_name": "Qatrah / قطرة",
-        "welcome_note": "Welcome! I am Qatrah, your water assistant. How can I help you today?"
+        "welcome_note": "Welcome! I am Qatrah, your water assistant. You can chat with me in Arabic or English."
     }
 
 @app.get("/chatbot")
 async def chatbot(user_input: str):
-    try:
-        # Context to define the bot's identity and language rules
-        context = (
-            "Your name is 'Qatrah' (قطرة). You are a professional assistant for a Water Management System. "
-            "Detect the user's language automatically. If the user speaks Arabic, respond in Arabic. "
-            "If the user speaks English, respond in English. Always introduce yourself as Qatrah if asked."
-        )
-        
-        full_prompt = f"{context}\nUser question: {user_input}"
-        
-        # Try to generate content
-        response = model.generate_content(full_prompt)
-        return {"reply": response.text}
-
-    except Exception as e:
-        # This will help us catch the exact reason for the 500 error
-        return {
-            "reply": "Sorry, I'm having trouble connecting to my AI core. Please try again later.",
-            "error_details": str(e)
-        }
+    for key in API_KEYS:
+        try:
+            genai.configure(api_key=key)
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            
+            context = (
+                "Your name is 'Qatrah' (قطرة). You are a professional assistant for a Water Management System. "
+                "Detect the user's language (Arabic or English) and respond in the same language. "
+                "Keep your answers helpful and concise."
+            )
+            
+            full_prompt = f"{context}\nUser: {user_input}"
+            response = model.generate_content(full_prompt)
+            return {"reply": response.text}
+            
+        except Exception as e:
+            if "429" in str(e) or "quota" in str(e).lower():
+                continue 
+            else:
+                return {"reply": "عذراً، واجهت مشكلة تقنية بسيطة.", "error_details": str(e)}
+    
+    return {"reply": "جميع خطوطي مشغولة حالياً بكثرة الزوار، فضلاً حاول مجدداً بعد دقائق قليلة!"}
 
 @app.get("/customer/{c_id}/invoices")
 async def get_invoices(c_id: int):
@@ -63,4 +67,4 @@ async def get_invoices(c_id: int):
         conn.close()
         return [{"date": str(r[0]), "amount": float(r[1]), "status": r[2]} for r in rows]
     except Exception as e:
-        return {"error": "Database connection failed", "details": str(e)}
+        return {"error": "Database error", "details": str(e)}
