@@ -141,3 +141,4 @@ async def list_accounts(c_id: int):
         return [{"account_number": a[0], "account_id": a[1]} for a in accounts]
     except Exception as e:
         return {"error": str(e)}
+    #1
