@@ -1,5 +1,5 @@
 import psycopg2
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from groq import Groq
 from pydantic import BaseModel
@@ -15,18 +15,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-GROQ_KEY = os.environ.get("GROQ_API_KEY", "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")
-client = Groq(api_key=GROQ_KEY)
+# قراءة المفتاح من بيئة النظام لضمان الأمان وتجاوز حماية GitHub
+GROQ_KEY = os.environ.get("GROQ_API_KEY")
+client = Groq(api_key=GROQ_KEY) if GROQ_KEY else None
+
 DB_URL = "postgresql://postgres:jCeYkVrnaQHuumtGZqsqmdbJlPvuZseZ@postgres.railway.internal:5432/railway"
 
-# قاموس لترجمة رسائل النظام الثابتة
 MESSAGES = {
     "ar": {
         "welcome": "نظام قطرة لإدارة المياه يعمل بنجاح",
         "service_success": "تم تسجيل طلب الزيارة الميدانية بنجاح",
         "replace_success": "تم استبدال العداد بنجاح. الرقم الجديد: ",
         "replace_denied": "العداد لا يحتاج استبدال حالياً.",
-        "error": "حدث خطأ في النظام",
         "bot_fail": "أعتذر منك، أنا قطرة، حاول مرة أخرى لا هنت."
     },
     "en": {
@@ -34,7 +34,6 @@ MESSAGES = {
         "service_success": "Field service request registered successfully",
         "replace_success": "Meter replaced successfully. New Serial: ",
         "replace_denied": "Meter does not need replacement at this time.",
-        "error": "System error occurred",
         "bot_fail": "I apologize, I am Qatrah, please try again."
     }
 }
@@ -51,6 +50,9 @@ async def home(lang: str = "ar"):
 
 @app.get("/chatbot")
 async def chatbot(user_input: str, c_id: int = None, lang: str = "ar"):
+    if not client:
+        return {"reply": "API Key is missing. Please set GROQ_API_KEY in Railway."}
+    
     context = ""
     if c_id:
         try:
@@ -73,7 +75,7 @@ async def chatbot(user_input: str, c_id: int = None, lang: str = "ar"):
         except:
             context = ""
 
-    system_prompt = f"Your name is Qatrah. {context}. Answer in {'Arabic' if lang == 'ar' else 'English'} language."
+    system_prompt = f"Your name is Qatrah. {context}. Answer in {'Arabic' if lang == 'ar' else 'English'}."
     if lang == "ar":
         system_prompt += " أجب بلهجة سعودية ودودة."
 
@@ -126,3 +128,16 @@ async def replace_meter(account_id: int, lang: str = "ar"):
         return {"error": str(e)}
     finally:
         conn.close()
+
+@app.get("/customer/{c_id}/accounts")
+async def list_accounts(c_id: int):
+    try:
+        conn = psycopg2.connect(DB_URL)
+        cur = conn.cursor()
+        cur.execute("SELECT account_number, id FROM accounts WHERE customer_id = %s", (c_id,))
+        accounts = cur.fetchall()
+        cur.close()
+        conn.close()
+        return [{"account_number": a[0], "account_id": a[1]} for a in accounts]
+    except Exception as e:
+        return {"error": str(e)}
