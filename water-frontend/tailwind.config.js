@@ -4,12 +4,7 @@ module.exports = {
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
   theme: {
-    extend: {
-      colors: {
-        'qatra-blue': '#0054A6',
-        'qatra-light': '#00A3E0',
-      },
-    },
+    extend: {},
   },
   plugins: [],
 }
